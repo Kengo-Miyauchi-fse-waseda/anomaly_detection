@@ -5,7 +5,7 @@ class LogCallback(Callback):
     def on_epoch_end(self, epoch, logs=None):
         loss = logs.get("loss")  # loss
         val_loss = logs.get("val_0_unsup_loss_numpy")  # 再構成誤差
-        logging.info(f"epoch {epoch+1 :>3} | loss:{loss:12.4f}, val_0_unsup_loss_numpy:{val_loss:12.4f}")
+        logging.info(f"epoch {epoch+1 :>3} | loss:{loss:10.4f},  val_0_unsup_loss_numpy:{val_loss:10.4f}")
 
 def set_log(filepath):
     logging.basicConfig(
