@@ -14,8 +14,8 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # download data
 dataset_name = "haenkaze"
-#parquet_file = f'data/{dataset_name}/2024_fixed.parquet'
-parquet_file = f'data/{dataset_name}/2024_10s_avg_data.parquet'
+parquet_file = f'data/{dataset_name}/2020_fixed.parquet'
+#parquet_file = f'data/{dataset_name}/2024_10s_avg_data.parquet'
 
 print(f"Loading data from {parquet_file}...")
 data = pd.read_parquet(parquet_file)
@@ -24,8 +24,8 @@ print("Finished loading data.")
 # preprocessing
 stampcol = "DateTime"
 data[stampcol] = pd.to_datetime(data[stampcol])
-train_range = ('2024-04-01','2024-09-15')
-valid_range = ('2024-09-16','2024-09-30')
+train_range = ('2020-04-01','2020-09-15')
+valid_range = ('2020-09-16','2020-09-30')
 
 train = utils.extract_specific_terms(data,train_range[0],train_range[1],stampcol)
 valid = utils.extract_specific_terms(data,valid_range[0],valid_range[1],stampcol)
@@ -39,8 +39,6 @@ del valid
 
 # memory management
 gc.collect()
-X_train = X_train.astype(np.float16)
-X_valid = X_valid.astype(np.float16)
 
 # scaling data
 """ from sklearn.preprocessing import StandardScaler
@@ -50,9 +48,9 @@ X_test = scaler.transform(X_test)
 X_valid = scaler.transform(X_valid) """
 
 # set execute model
-model_name = "tabnet-pretrain-10s"
+model_name = "tabnet-pretrain-01"
 config = set_config_file()
-exec_model = ExecModel(X_train,X_valid,device,config,dataset_name,model_name)
+exec_model = ExecModel(device,config,dataset_name,model_name,X_train,X_valid,refit=True)
 out_dir = exec_model.out_dir
 
 print(f"finish model build: {exec_model.path_to_pretrained}")

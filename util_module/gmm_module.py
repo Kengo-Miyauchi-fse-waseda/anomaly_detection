@@ -7,7 +7,7 @@ def calc_AnomalyScore(n_components, covariance_type, feature_train, feature_test
     log_likelihood = -gmm.score_samples(feature_train)
     threshold = np.percentile(log_likelihood,99.9)
     anomaly_score = -gmm.score_samples(feature_test)
-    img_path = out_dir + "/gmm_" + str(n_components) + "components"
+    img_path = out_dir + "/gmm_" + str(n_components) + "components.png"
     # os.makedirs(img_path, exist_ok=True)
     
     return anomaly_score, threshold, img_path

@@ -4,26 +4,24 @@ import yaml
 from util_module.callback import LogCallback
 import logging
 import os
-import json
 
 class ExecModel:
-    def __init__(self, X_train, X_valid, device, config, dataset_name, model_name,
+    def __init__(self, device, config, dataset_name, model_name, X_train, X_valid=None, refit=False,
                  feature_dim=None, n_steps=None, optimizer_params=None, batch_size_pre=None, batch_size_tr=None,
-                 gmm_multi=None, log_plot=None, covariance_type=None, pretraining_ratio=None, max_epochs=None,
+                 covariance_type=None, pretraining_ratio=None, max_epochs=None,
                  path_to_pretrained=None):
-        self.X_train = X_train
-        self.X_valid = X_valid
         self.device = device
         self.config = config
         self.dataset_name = dataset_name
         self.model_name = model_name
+        self.X_train = X_train
+        self.X_valid = X_valid
+        self.refit = refit
         self.feature_dim = feature_dim
         self.n_steps = n_steps
         self.optimizer_params = optimizer_params
         self.batch_size_pre = batch_size_pre
         self.batch_size_tr = batch_size_tr
-        self.gmm_multi = gmm_multi
-        self.log_plot = log_plot
         self.covariance_type = covariance_type
         self.pretraining_ratio = pretraining_ratio
         self.max_epochs = max_epochs
@@ -34,19 +32,27 @@ class ExecModel:
         self.conditions=self.gather_conditions()
         self.out_dir = self.set_out_dir()
         os.makedirs(self.out_dir, exist_ok=True)
-        self.path_to_pretrained = './model/' + dataset_name + "/tabnet-pretrain-" + str(self.feature_dim) + "dim"
+        if(self.path_to_pretrained==None):
+            self.path_to_pretrained = './model/' + dataset_name + "/tabnet-pretrain-out2023-" + str(self.feature_dim) + "dim"
         os.makedirs(self.path_to_pretrained, exist_ok=True)
-        self.set_log()
         
-        self.path_to_pretrained +="/pretrained.pth"
-        if(os.path.exists(self.path_to_pretrained)):
-            self.unsupervised_model=torch.load(self.path_to_pretrained)
+        if(os.path.exists(self.path_to_pretrained+"/pretrained.pth")):
+            print(f"Load model from {self.path_to_pretrained}/pretrained.pth")
+            self.unsupervised_model=torch.load(self.path_to_pretrained+"/pretrained.pth")
+            if(self.refit):
+                self.set_log(filepath=self.path_to_pretrained + '/pretraining_refit.log')
+                #self.unsupervised_model=self.set_unsupervised_model()
+                logging.info("Starting TabNet pretraining...")
+                self.fit_model()
+                logging.info("TabNet pretraining finished.")
+                torch.save(self.unsupervised_model, self.path_to_pretrained+"/pretrained_refit.pth")
         else:
+            self.set_log(filepath=self.path_to_pretrained + '/pretraining.log')
             self.unsupervised_model=self.set_unsupervised_model()
             logging.info("Starting TabNet pretraining...")
             self.fit_model()
             logging.info("TabNet pretraining finished.")
-            torch.save(self.unsupervised_model, self.path_to_pretrained)
+            torch.save(self.unsupervised_model, self.path_to_pretrained+"/pretrained.pth")
             # self.unsupervised_model.save_model(path_to_pretrained)
     
     # 事前学習モデルの設定
@@ -74,8 +80,7 @@ class ExecModel:
         )
     
     # ログの設定
-    def set_log(self):
-        filepath=self.path_to_pretrained + '/pretraining.log'
+    def set_log(self,filepath):
         logging.basicConfig(
             filename=filepath,
             filemode='w',
@@ -86,8 +91,9 @@ class ExecModel:
     
     def set_out_dir(self):
         out_dir = "result/" + self.dataset_name + "/" + self.model_name + "/" + str(self.feature_dim) + "dim"
-        if(self.covariance_type!='full'):
-            out_dir += ("-" + self.covariance_type)
+        if(self.covariance_type!=None):
+            if(self.covariance_type!='full'):
+                out_dir = out_dir + "-" + self.covariance_type
         os.makedirs(out_dir, exist_ok=True)
         return out_dir
         
@@ -113,12 +119,3 @@ class ExecModel:
     def gather_conditions(self):
         conditions = [("feature_dim",self.feature_dim),("optimizer_params",self.optimizer_params),("pretraining_ratio",self.pretraining_ratio),("max_epochs",self.max_epochs)]
         return conditions
-    
-
-    def custom_save_model(model, filepath):
-        model_dict = model.__dict__
-        for key, value in model_dict.items():
-            if isinstance(value, torch.device):
-                model_dict[key] = str(value)
-        with open(filepath, 'w') as f:
-            json.dump(model_dict, f)

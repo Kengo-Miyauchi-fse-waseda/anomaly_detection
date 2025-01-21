@@ -1,7 +1,7 @@
 from datetime import datetime
 
 def show_info(out_dir,exec_model):
-    print("result: "+out_dir)
+    #print("result: "+out_dir)
     current_time = datetime.now()
     formatted_time = current_time.strftime("%Y-%m-%d %H:%M:%S")
     print((f"End Time : {formatted_time}\n"))
